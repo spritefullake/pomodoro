@@ -1,0 +1,39 @@
+@startuml
+skinparam componentStyle uml2
+
+skinparam component {
+    BackgroundColor tomato
+    FontSize 18
+    FontColor white
+}
+skinparam interface{
+    BackgroundColor tomato
+    BorderColor tomato
+    FontSize 18
+}
+
+[Insertion Method] as Insrt 
+[Interpretation Method] as Intrp
+[Timing Module] as Timng
+[Notification System] as Note
+[Completion Method] as Comp
+[Display Module] as Disp
+[Settings System] as Set 
+[Settings Insertion Method] as SetInsrt 
+
+Insrt --> Intrp
+Intrp --> Timng
+Timng --> Note
+Note -l-> Comp
+Comp -u-> Disp
+
+Intrp -l-> Disp
+
+SetInsrt --> Set
+Set -l-> Timng
+
+() "time configuration" --> SetInsrt
+() "tasks to do" --> Insrt
+Note --> Notification
+
+@enduml
