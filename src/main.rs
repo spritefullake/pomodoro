@@ -1,10 +1,11 @@
 use std::sync::mpsc;
 use std::time;
 
-use crate::lib::{Task, Pomodoro};
+use pomodoro_timer::{Task,Pomodoro};
 
 /// TODO: Develop an input method for tasks 
 /// and a display method for pomodoros
+/// TODO: Error handling
 fn main() {
     //The main way to receive updates from pomodoros
     let (tx, rx) = mpsc::channel();
