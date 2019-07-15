@@ -1,41 +1,13 @@
-use std::thread;
+use std::sync::mpsc;
 use std::time;
 
+use crate::lib::{Task, Pomodoro};
 
-/* a Pomodoro consists of the task 
-needed to be completed in that time*/
-struct Pomodoro {
-    task: Task,
-    duration: time::Duration,
-}
-/// TODO: add channels that can send updates of the timer to the main thread
-/// or try a shared memory solution
-impl Pomodoro {
-    fn start(mut self) -> thread::JoinHandle<()> {
-        println!("Starting pomodoro for {} seconds",self.duration.as_secs());
-        thread::spawn(move || {
-            while self.duration.as_secs() > 0 {
-                thread::sleep(time::Duration::from_secs(1));
-                self.decrement_seconds(1);
-
-            }
-        })
-    }
-    fn decrement_seconds(&mut self, amount : u64) -> &mut Self{
-        self.duration = 
-        time::Duration::from_secs(self.duration.as_secs()  - amount);
-        self
-    }
-}
-
-struct Task{
-    title: String,
-    notes: String,
-    completed: bool,
-}
-
-
+/// TODO: Develop an input method for tasks 
+/// and a display method for pomodoros
 fn main() {
+    //The main way to receive updates from pomodoros
+    let (tx, rx) = mpsc::channel();
 
     let task1 = Task{
         title: String::from("Mowing the lawn"),
@@ -50,12 +22,16 @@ fn main() {
 
     println!("Let us do this pomodoro!");
 
-    let thread1 = pomo1.start();
+    let thread1 = pomo1.start(tx);
 
-    thread1.join().expect("Thread error");
     
+    for received in rx {
+        println!("Received {}",received);
+    }
  
     println!("Now your pomodoro has ended!");
+
+    println!("Completed? {}",thread1.join().unwrap().task.completed);
 
 
 }
