@@ -1,18 +1,18 @@
-use super::pomodoro;
 use std::fs;
 use std::time::Duration;
 use std::error::Error;
+use std::env;
 
 pub mod config;
 /// TODO: Coordinate the inputs and pomodoro integration
-pub fn run(config: config::Config) -> () {
+pub fn run(args: env::Args) -> () {
+    let config = config::Config::new(args).unwrap();
     let filename = config.filename;
     let duration = Duration::from_secs(config.seconds);
 
     let contents = fs::read_to_string(filename).expect("File read/open error!");
     // time::Duration implements copy!
-    contents.lines().map(|line| pomodoro::new(String::from(line),duration)).map(|(task,timer)| {
-        println!("The task is: {}",&task);
-    });
+    // iterators are lazy so currently won't run!
+    contents.lines().map(|line| println!("The line is {}",line));
 
 }
