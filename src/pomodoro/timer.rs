@@ -18,22 +18,34 @@ impl Timer {
     /// Begins the pomodoro timer with periodic updates sent every second. 
     /// Displaying responsibility falls on the receiver.
     /// There will be one pomodoro timer running at a time, so message passing makes sense.
-    pub fn start(mut self, tx: mpsc::Sender<u64>) -> thread::JoinHandle<Self> {
+    pub fn start(mut self, tx: mpsc::Sender<Event>) -> thread::JoinHandle<Event> {
         thread::spawn(move || {
+            tx.send(Event::Start);
+
             while self.duration.as_secs() > 0 {
                 thread::sleep(time::Duration::from_secs(1));
                 self.decrement_seconds(1);
 
-                tx.send(self.duration.as_secs()).unwrap();
+                // Every timer tick is sent
+                tx.send(Event::Tick(self.duration)).unwrap();
             };
-            // When the timer ends:
-            tx.send(0).unwrap();
-            self
+            // When the timer ends
+            tx.send(Event::End).unwrap();
+            Event::End
         })
     }
     fn decrement_seconds(&mut self, amount : u64) -> &mut Self{
-        self.duration = 
-        time::Duration::from_secs(self.duration.as_secs()  - amount);
+        self.duration -= time::Duration::new(amount,0);
         self
     }
+}
+
+/// The events emitted during the lifecyle of the timer.
+/// Enums with data contain the remaining duration of the timer
+pub enum Event{
+    Start,
+    Tick(time::Duration),
+    Pause(time::Duration),
+    End,
+    Reset(time::Duration),
 }

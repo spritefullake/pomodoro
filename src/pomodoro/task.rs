@@ -18,3 +18,9 @@ impl Task{
         self.completed = true;
     }
 }
+
+impl std::fmt::Display for Task{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} : {}", self.title, self.completed)
+    }
+}

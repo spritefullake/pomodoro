@@ -6,6 +6,7 @@ pub fn new(title: String, duration: Duration) -> (task::Task, timer::Timer){
     (task::Task::new(title), timer::Timer::new(duration))
 }
 
+
 /*
 
 /// A Pomodoro consists of the task 
