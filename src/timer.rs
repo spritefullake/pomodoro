@@ -1,37 +1,25 @@
 use std::thread;
 use std::time;
-use std::sync::mpsc;
+use std::sync::{Arc,mpsc};
 
 /// Manages the timekeeping of a pomodoro. 
 pub struct Timer {
     duration: time::Duration,
+    tx: mpsc::Sender<Response>,
+    rx: mpsc::Receiver<Request>,
+
 }
+
 
 /// TODO: add channels that can send updates of the timer to the main thread
 /// or try a shared memory solution
 impl Timer {
-    pub fn new(duration: time::Duration) -> Self {
-        Self{
-            duration
-        }
-    }
     /// Begins the pomodoro timer with periodic updates sent every second. 
     /// Displaying responsibility falls on the receiver.
     /// There will be one pomodoro timer running at a time, so message passing makes sense.
-    pub fn start(mut self, tx: mpsc::Sender<Event>) -> thread::JoinHandle<Event> {
+    fn start(mut self) -> thread::JoinHandle<Response> {
         thread::spawn(move || {
-            tx.send(Event::Start);
-
-            while self.duration.as_secs() > 0 {
-                thread::sleep(time::Duration::from_secs(1));
-                self.decrement_seconds(1);
-
-                // Every timer tick is sent
-                tx.send(Event::Tick(self.duration)).unwrap();
-            };
-            // When the timer ends
-            tx.send(Event::End).unwrap();
-            Event::End
+            unimplemented!();
         })
     }
     fn decrement_seconds(&mut self, amount : u64) -> &mut Self{
@@ -42,10 +30,16 @@ impl Timer {
 
 /// The events emitted during the lifecyle of the timer.
 /// Enums with data contain the remaining duration of the timer
-pub enum Event{
+pub enum Request{
     Start,
-    Tick(time::Duration),
-    Pause(time::Duration),
-    End,
+    Pause,
     Reset(time::Duration),
+    End,
+}
+pub enum Response{
+    Starting,
+    Ticking(time::Duration),
+    Pausing(time::Duration),
+    Resetting,
+    Ending,
 }
