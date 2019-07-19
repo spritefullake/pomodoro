@@ -1,12 +1,15 @@
-use std::sync::mpsc::channel; 
+use std::sync::mpsc::channel;
 use std::time;
-   
-mod cli;
-mod timer;
-
 use std::thread;
 
-/// TODO: Develop an input method for tasks 
+mod cli;
+mod controller;
+mod timer;
+
+use controller::Controllable;
+
+
+/// TODO: Develop an input method for tasks
 /// and a display method for pomodoros
 /// TODO: Error handling
 fn main() {
@@ -14,29 +17,16 @@ fn main() {
 
     //cli::run(std::env::args());
 
-    let (txTimer, rxTimer) = channel::<timer::Response>();
-    let (txCont, rxCont) = channel::<timer::Request>();
+    let cont : controller::Controller = timer::Timer::new(time::Duration::from_secs(8),String::from("timer")).controlled();
 
-    
 
-    let t = timer::Timer{
-        tx: txTimer,
-        rx: rxCont,
-        duration: time::Duration::from_secs(7)
-    };
-
-    let cont = timer::Controller{
-        tx: txCont,
-        rx: rxTimer,
-        timer: t,
-    };
-
-    cont.watch(t);
-
+    cont.start();
+    println!("Just the main thread stopping through");
     std::thread::sleep(time::Duration::from_secs(2));
     cont.stop();
     thread::sleep(time::Duration::from_secs(2));
     cont.unpause();
+    println!("This is the main");
 
     thread::sleep(time::Duration::from_secs(7));
 
