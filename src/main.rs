@@ -4,9 +4,9 @@ use std::thread;
 
 mod cli;
 mod controller;
+mod controllable;
 mod timer;
-
-use controller::Controllable;
+use controllable::{Controllable};
 
 
 /// TODO: Develop an input method for tasks
@@ -17,18 +17,8 @@ fn main() {
 
     //cli::run(std::env::args());
 
-    let cont : controller::Controller = timer::Timer::new(time::Duration::from_secs(8),String::from("timer")).controlled();
+    let cont : controller::Controller = timer::Timer::new(time::Duration::from_secs(8),String::from("timer")).controlled().unwrap();
 
-
-    cont.start();
-    println!("Just the main thread stopping through");
-    std::thread::sleep(time::Duration::from_secs(2));
-    cont.stop();
-    thread::sleep(time::Duration::from_secs(2));
-    cont.unpause();
-    println!("This is the main");
-
-    thread::sleep(time::Duration::from_secs(7));
 
 
 }
