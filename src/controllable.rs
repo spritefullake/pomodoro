@@ -1,11 +1,13 @@
-use std::sync::mpsc;
-use std::thread;
-use std::time;
-
-use super::timer::{Timer};
-use super::controller::{Controller, Response, Request};
-use std::error::Error;
-
+use std::{
+    sync::mpsc,
+    thread,
+    time,
+    error::Error,
+};
+use super::{
+    controller::{Controller, Response, Request},
+    timer::{Timer},
+};
 
 /// Allows use of an api-controlled event system with message passing
 pub trait Controllable {

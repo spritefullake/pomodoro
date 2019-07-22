@@ -1,9 +1,10 @@
-use std::sync::mpsc;
-use std::thread;
-use std::time;
+use std::{
+    sync::mpsc,
+    thread,
+    time,
+    error::Error,
+};
 
-
-use std::error::Error;
 
 /// Exposes an api of the events sent and received to the controlled actor. 
 pub struct Controller {
@@ -15,6 +16,7 @@ pub struct Controller {
 
     /// Used by the controlled to message the controller
     pub controlled_tx: mpsc::SyncSender<Response>,
+    
 }
 
 /// The output for any controller request
@@ -24,6 +26,7 @@ impl Controller {
     // Sending messages to the controlled actor
     // Each sending action should return the controlled agent's response
     
+    /// Begin the associated controlled agent event loop
     pub fn start(&self) -> Output{
         self.control_tx.send(Request::Start)?;
     
