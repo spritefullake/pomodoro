@@ -4,6 +4,7 @@ use std::time;
 /// Manages the timekeeping of a pomodoro.
 pub struct Timer {
     pub duration: time::Duration,
+    // is this field necessary?
     pub name: String,
 }
 

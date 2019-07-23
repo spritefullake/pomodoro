@@ -41,11 +41,14 @@ impl Controllable for Timer {
     }
     
     /// Begins the other thread, from which the controlled agent can receive requests
+    //  why am I returning a JoinHandle if I don't use it?
     fn turn_on(mut self, tx: mpsc::SyncSender<Response>, rx: mpsc::Receiver<Request>) 
     -> Result<thread::JoinHandle<()>, Box<dyn Error> > {
         
         let t = thread::Builder::new().name(self.name.clone())
         .spawn(move || {
+            // think about adding external while to check for an "end" signal
+
             //block thread; waiting for start signal
             for received in &rx {
                 if let Request::Start = received{
@@ -65,14 +68,14 @@ impl Controllable for Timer {
                 if let Request::Info = received {
                     tx.send(Response::Ticking(self.duration)).unwrap();
                 };
-
                 // Main change applied to the data here
+                // consider modularizing? 
                 self.decrement_seconds(1);
                 thread::sleep(time::Duration::new(1, 0));
-
             }
             
             tx.send(Response::Ending).unwrap();
+
         })?;
 
         Ok(t)

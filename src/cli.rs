@@ -20,7 +20,7 @@ use super::{
 2. Convert these into tasks 
 3. Store these tasks somewhere
 4. Begin a timer
-5. Print out each timer tick with its associated task
+5. Print out each timer tick with its associated task?
 6. When the timer runs out, remove the task */
 
 pub mod config;
@@ -31,6 +31,7 @@ pub fn run(args: env::Args) -> () {
     let filename = config.filename;
     let duration = Duration::from_secs(config.seconds);
 
+    // handle opening error and create an empty, appendable file for that
     let contents = fs::read_to_string(filename).expect("File read/open error!");
 
     let make_task = |line| Task::new(String::from(line));
@@ -73,7 +74,7 @@ pub fn run(args: env::Args) -> () {
                 cont.start().map(|res| println!("The response is {:?}",res)).expect("Starting Error!");
             },
             "pause" => {
-                println!("ending the thread")
+                println!("pausing the thread")
             },
             "current" => {
                 let current =  pomo.current();

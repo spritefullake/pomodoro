@@ -5,7 +5,6 @@ use std::{
     error::Error,
 };
 
-
 /// Exposes an api of the events sent and received to the controlled actor. 
 pub struct Controller {
 
@@ -15,9 +14,20 @@ pub struct Controller {
     pub control_rx: mpsc::Receiver<Response>,
 
     /// Used by the controlled to message the controller
+    // Do I need this? Seems coupled
     pub controlled_tx: mpsc::SyncSender<Response>,
     
 }
+/* 
+    If user clicks start button
+    timer gets messaged to start
+    timer returns back that it is starting
+    MESSAGE PASSING (alternative is called shared memory)
+    Timer will be running in a different thread
+    We are running timer in a different thread because we do not want timer
+    to interfere with the main thread (so the main thread does not get stopped/blocked since
+    we would be waiting for timer) 
+ */
 
 /// The output from any controller request is the response from the controlled agent
 type Output =  Result< Response, Box<dyn Error> >;
@@ -25,6 +35,8 @@ type Output =  Result< Response, Box<dyn Error> >;
 impl Controller {
     // Sending messages to the controlled actor
     // Each sending action should return the controlled agent's response
+
+    // TODO: Handle errors in here instead of the CLI
 
     /// Sends a request to the controlled agent and returns the response
     fn send(&self, req: Request) -> Output{
@@ -44,15 +56,17 @@ impl Controller {
     pub fn info(&self) -> Output {
         self.send(Request::Info)
     }
+    pub fn pause(&self) -> Output {
+        self.send(Request::Pause)
+    }
 
     // Actually controlling the controlled actor
-
+    // Should I add an unpause response from the controlled ?
     pub fn unpause(&self){
-        for received in &self.control_rx {
-            if let  Response::Pausing(thread) = received {
-                thread.unpark();
-            }
-        };
+        let received = self.control_rx.recv().unwrap();
+        if let Response::Pausing(thread) = received {
+            thread.unpark();
+        }
     }
     
 
@@ -63,6 +77,7 @@ impl Controller {
 /// Enums with data contain the remaining duration of the timer
 /// Meant for event lifecycles with a defined Start and End
 /// TODO: Implement trait objects or generic parameters for decoupling
+/// Sent from the control thread to the controlled thread
 pub enum Request {
     Start,
     Continue,
@@ -72,7 +87,7 @@ pub enum Request {
     Reset(time::Duration),
     End,
 }
-
+/// Sent from the controlled thread to the control thread
 #[derive(Debug)]
 pub enum Response {
     Starting,

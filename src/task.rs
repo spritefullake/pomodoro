@@ -5,7 +5,6 @@ pub struct Task{
     completed: bool,
 }
 
-
 impl Task{
     pub fn new(title: String) -> Task {
         Task{
