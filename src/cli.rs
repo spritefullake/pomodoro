@@ -33,7 +33,7 @@ pub fn run(args: env::Args) -> () {
 
     let contents = fs::read_to_string(filename).expect("File read/open error!");
 
-    let makeTask = |line| Task::new(String::from(line));
+    let make_task = |line| Task::new(String::from(line));
 
     let mut pomo = Pomodoro {
         tasks: VecDeque::new(),
@@ -41,7 +41,7 @@ pub fn run(args: env::Args) -> () {
 
     contents.lines().map(|line| {
         // Tasks will be kept on a queue and popped when completed
-        let task = makeTask(line);
+        let task = make_task(line);
 
         println!("Adding {}",&task);
         pomo.tasks.push_back(task);
@@ -66,6 +66,7 @@ pub fn run(args: env::Args) -> () {
 
         let trimmed = command.trim();
 
+        // TODO: create mapping of commands to using the pomodoro / timer / controller api
         match trimmed{
             "start" => {
                 println!("Starting the timer");
@@ -86,7 +87,7 @@ pub fn run(args: env::Args) -> () {
                 &pomo.tasks.iter().map(|task| println!("{}",task)).for_each(drop);
             },
             "timer" => {
-                let result = cont.get_tick();
+                let result = cont.info();
                 match result.unwrap() {
                     Response::Ticking(duration) => println!("The timer has {} seconds remaining",duration.as_secs()),
                     _                           => println!("No tick!") 

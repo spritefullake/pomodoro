@@ -62,10 +62,14 @@ impl Controllable for Timer {
                     tx.send(Response::Pausing(thread::current())).unwrap();
                     thread::park();
                 };
+                if let Request::Info = received {
+                    tx.send(Response::Ticking(self.duration)).unwrap();
+                };
 
+                // Main change applied to the data here
                 self.decrement_seconds(1);
-                tx.send(Response::Ticking(self.duration)).unwrap();
                 thread::sleep(time::Duration::new(1, 0));
+
             }
             
             tx.send(Response::Ending).unwrap();

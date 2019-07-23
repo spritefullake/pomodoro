@@ -19,25 +19,30 @@ pub struct Controller {
     
 }
 
-/// The output for any controller request
+/// The output from any controller request is the response from the controlled agent
 type Output =  Result< Response, Box<dyn Error> >;
 /// TODO: implement error handling/propagation and improve the return type
 impl Controller {
     // Sending messages to the controlled actor
     // Each sending action should return the controlled agent's response
-    
-    /// Begin the associated controlled agent event loop
-    pub fn start(&self) -> Output{
-        self.control_tx.send(Request::Start)?;
-    
+
+    /// Sends a request to the controlled agent and returns the response
+    fn send(&self, req: Request) -> Output{
+        self.control_tx.send(req)?;
+
         let res = self.control_rx.recv()?;
         Ok(res)
     }
-    pub fn end(&self) -> Output{
-        self.control_tx.send(Request::End)?;
     
-        let res = self.control_rx.recv()?;
-        Ok(res)
+    /// Begin the associated controlled agent event loop
+    pub fn start(&self) -> Output{
+        self.send(Request::Start)
+    }
+    pub fn end(&self) -> Output{
+        self.send(Request::End)
+    }
+    pub fn info(&self) -> Output {
+        self.send(Request::Info)
     }
 
     // Actually controlling the controlled actor
@@ -49,18 +54,7 @@ impl Controller {
             }
         };
     }
-
-    pub fn get_tick(&self) -> Output {
-
-        let received = self.control_rx.try_recv()?;
-        if let Response::Ticking(duration) = received {
-            Ok(received)
-        }
-        else{
-            Ok(received)
-        }
-
-    }
+    
 
 }
 
@@ -72,6 +66,7 @@ impl Controller {
 pub enum Request {
     Start,
     Continue,
+    Info,
     Waiting,
     Pause,
     Reset(time::Duration),
