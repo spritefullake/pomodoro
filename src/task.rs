@@ -17,10 +17,18 @@ impl Task{
     pub fn complete(&mut self){
         self.completed = true;
     }
+    pub fn is_complete(&self) -> bool{
+        self.completed == true
+    }
 }
 
 impl std::fmt::Display for Task{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} : {}", self.title, self.completed)
+
+        let modifier = match self.completed {
+            true  => "",
+            false => "not",
+        };
+        write!(f, "{} is {} completed", self.title, modifier)
     }
 }

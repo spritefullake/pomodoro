@@ -50,6 +50,18 @@ impl Controller {
         };
     }
 
+    pub fn get_tick(&self) -> Output {
+
+        let received = self.control_rx.try_recv()?;
+        if let Response::Ticking(duration) = received {
+            Ok(received)
+        }
+        else{
+            Ok(received)
+        }
+
+    }
+
 }
 
 
