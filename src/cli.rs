@@ -55,10 +55,10 @@ pub fn run(args: env::Args) -> () {
     let tmr = Timer::new(duration, String::from("timer"));
     let cont: Controller = tmr.controlled().unwrap();
 
-    command_loop(cont, pomo);
+    command_loop(cont, &mut pomo);
 }
 
-pub fn command_loop(c: Controller, p: Pomodoro) -> io::Result<()> {
+pub fn command_loop(c: Controller, p: &mut Pomodoro) -> io::Result<()> {
     let mut command = String::new();
     let prompt = ">>>>  ";
     //pair with writeln! to avoid unnecessary flushing from println!
@@ -75,6 +75,8 @@ pub fn command_loop(c: Controller, p: Pomodoro) -> io::Result<()> {
             .expect("Failed to read line");
         let trimmed = command.trim();
 
+        let default_width = 8;
+
         // TODO: create mapping of commands to using the pomodoro / timer / controller api
         // Implement add, help, commands
         match trimmed {
@@ -90,19 +92,26 @@ pub fn command_loop(c: Controller, p: Pomodoro) -> io::Result<()> {
             "current" => {
                 let current = p.current();
                 match current {
-                    Some(task) => writeln!(handle, "The current task is:\n {}", task)?,
-                    None => writeln!(handle, "There is no task currently!")?,
+                    Some(task) => writeln!(handle, "{}", format_task(task, default_width))?,
+                    None => writeln!(handle, "There is no current task!")?,
+                }
+            }
+            "complete" => match p.complete_next() {
+                Some(task) => writeln!(
+                    handle,
+                    "Just completed: {}",
+                    format_task(task, default_width)
+                )?,
+                None => writeln!(handle, "No more tasks to complete!")?,
+            }
+            "pop" => {
+                match p.tasks.pop_front() {
+                    Some(task) => writeln!(handle, "Just popped: {}", format_task(&task, default_width))?,
+                    None => writeln!(handle, "No more tasks to pop!")?
                 }
             }
             "tasks" => {
-                let max_width = p.tasks.iter().map(|task| task.title.len()).max().unwrap_or(0);
-                writeln!(handle, "{1:^0$} | {2}", max_width, "Tasks", "Complete?");
-                
-                p.tasks
-                    .iter()
-                    .map(|task| format_task(task, max_width))
-                    .map(|task| writeln!(handle, "{}", task))
-                    .for_each(drop);
+                format_tasks(p).iter().for_each(|line| println!("{}", line));
             }
             "timer" => {
                 let result = c.info();
@@ -125,11 +134,46 @@ pub fn command_loop(c: Controller, p: Pomodoro) -> io::Result<()> {
     }
 }
 
-pub fn format_task(task: &Task, width: usize) -> String{
+pub fn format_task(task: &Task, width: usize) -> String {
     let mut completion = " ";
+
     if task.is_complete() {
         completion = "✓";
     };
 
-    format!("{1:0$} | [{2}]",width,task.title,completion)
+    format!("{1:0$} | [{2}]", width, task.title, completion)
+}
+pub fn format_tasks(p: &Pomodoro) -> Vec<String> {
+    let max_width = p
+        .tasks
+        .iter()
+        .map(|task| task.title.len())
+        .max()
+        .unwrap_or(0);
+    let current_marker = "<<";
+    let delimiter = "\n";
+    let header = format!(
+        "{1:^0$} | {2}{3}",
+        max_width, "Tasks", "Complete?", delimiter
+    );
+
+    let tasks = p
+        .tasks
+        .iter()
+        .map(|task| {
+            let formatted = format_task(task, max_width);
+            if let Some(current) = p.current() {
+                //check pointer equality since == not implemented on Tasks
+                if current as *const _ == task as *const _ {
+                    format!("{}{}{}", formatted, current_marker, delimiter)
+                } else {
+                    format!("{}{}", formatted, delimiter)
+                }
+            } else {
+                format!("{}{}", formatted, delimiter)
+            }
+        })
+        .collect();
+
+    vec![header, tasks]
 }
