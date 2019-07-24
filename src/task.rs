@@ -1,7 +1,7 @@
 /// Represents an item that is desired to be completed
 /// at some point in the future.
 pub struct Task{
-    title: String,
+    pub title: String,
     completed: bool,
 }
 

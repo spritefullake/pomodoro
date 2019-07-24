@@ -48,32 +48,44 @@ impl Controllable for Timer {
         let t = thread::Builder::new().name(self.name.clone())
         .spawn(move || {
             // think about adding external while to check for an "end" signal
+            'quitCheck: loop {
+                //block thread; waiting for start signal
+                for received in &rx {
+                    if let Request::Start = received{
+                        tx.send(Response::Starting).unwrap();
+                        break;
+                    }
+                };
 
-            //block thread; waiting for start signal
-            for received in &rx {
-                if let Request::Start = received{
-                    tx.send(Response::Starting).unwrap();
-                    break;
+                while self.duration.as_secs() > 0 {
+
+                    let received = &rx.try_recv().unwrap_or_else(|_| Request::Continue);
+
+                    if let Request::Pause = received {
+                        tx.send(Response::Pausing(thread::current())).unwrap();
+                        thread::park();
+                    };
+                    if let Request::Info = received {
+                        tx.send(Response::Ticking(self.duration)).unwrap();
+                    };
+                    if let Request::End = received{
+                        break 'quitCheck;
+                    }
+
+                    // Main change applied to the data here
+                    // consider modularizing? 
+                    self.decrement_seconds(1);
+                    thread::sleep(time::Duration::new(1, 0));
+
+
                 }
-            };
 
-            while self.duration.as_secs() > 0 {
-
-                let received = &rx.try_recv().unwrap_or_else(|_| Request::Continue);
-
-                if let Request::Pause = received {
-                    tx.send(Response::Pausing(thread::current())).unwrap();
-                    thread::park();
-                };
-                if let Request::Info = received {
-                    tx.send(Response::Ticking(self.duration)).unwrap();
-                };
-                // Main change applied to the data here
-                // consider modularizing? 
-                self.decrement_seconds(1);
-                thread::sleep(time::Duration::new(1, 0));
-            }
+                if let Request::End = &rx.recv().unwrap(){
+                    break 'quitCheck;
+                }
             
+            }
+            //Finally indicate the thread has ended
             tx.send(Response::Ending).unwrap();
 
         })?;
