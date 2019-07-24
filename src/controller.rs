@@ -1,10 +1,11 @@
 use std::{
     sync::mpsc,
-    thread,
-    time,
     error::Error,
 };
-
+use super::{ 
+    events::{Request, Response, Sender, Receiver},
+    controllable::{Controllable},
+};
 /// Exposes an api of the events sent and received to the controlled actor. 
 pub struct Controller {
 
@@ -68,31 +69,26 @@ impl Controller {
             thread.unpark();
         }
     }
+
+       /// Generates the Controller for the controlled agent
+    pub fn control(agent : impl Controllable) -> Result<Self, Box<dyn Error>> {
+        // Rendezvous channels; sends from these block the current thread until received
+        let (control_tx, controlled_rx) = mpsc::sync_channel::<Request>(0);
+        let (controlled_tx, control_rx) = mpsc::sync_channel::<Response>(0);
+
+        let clone_tx = Sender::clone(&controlled_tx);
+
+        agent.activate(controlled_tx, controlled_rx)?;
+
+        let controller = Controller {
+            control_tx,
+            control_rx,
+
+            controlled_tx: clone_tx,
+        };
+
+        Ok(controller)
+    }
     
 
-}
-
-
-/// The events emitted during the lifecyle.
-/// Enums with data contain the remaining duration of the timer
-/// Meant for event lifecycles with a defined Start and End
-/// TODO: Implement trait objects or generic parameters for decoupling
-/// Sent from the control thread to the controlled thread
-pub enum Request {
-    Start,
-    Continue,
-    Info,
-    Waiting,
-    Pause,
-    Reset(time::Duration),
-    End,
-}
-/// Sent from the controlled thread to the control thread
-#[derive(Debug)]
-pub enum Response {
-    Starting,
-    Ticking(time::Duration),
-    Pausing(thread::Thread),
-    Resetting,
-    Ending,
 }

@@ -1,9 +1,10 @@
 use super::{
     controllable::{self, Controllable},
-    controller::{Controller, Request, Response},
+    controller::{Controller},
     pomodoro::Pomodoro,
     task::Task,
     timer::Timer,
+    events::{Request, Response},
 };
 use std::{
     collections::VecDeque,
@@ -53,7 +54,7 @@ pub fn run(args: env::Args) -> () {
         .for_each(drop);
 
     let tmr = Timer::new(duration, String::from("timer"));
-    let cont: Controller = tmr.controlled().unwrap();
+    let cont: Controller = Controller::control(tmr).unwrap();
 
     command_loop(cont, &mut pomo);
 }
@@ -103,13 +104,13 @@ pub fn command_loop(c: Controller, p: &mut Pomodoro) -> io::Result<()> {
                     format_task(task, default_width)
                 )?,
                 None => writeln!(handle, "No more tasks to complete!")?,
-            }
-            "pop" => {
-                match p.tasks.pop_front() {
-                    Some(task) => writeln!(handle, "Just popped: {}", format_task(&task, default_width))?,
-                    None => writeln!(handle, "No more tasks to pop!")?
+            },
+            "pop" => match p.tasks.pop_front() {
+                Some(task) => {
+                    writeln!(handle, "Just popped: {}", format_task(&task, default_width))?
                 }
-            }
+                None => writeln!(handle, "No more tasks to pop!")?,
+            },
             "tasks" => {
                 format_tasks(p).iter().for_each(|line| println!("{}", line));
             }
@@ -144,7 +145,7 @@ pub fn format_task(task: &Task, width: usize) -> String {
     format!("{1:0$} | [{2}]", width, task.title, completion)
 }
 pub fn format_tasks(p: &Pomodoro) -> Vec<String> {
-    let max_width = p
+    let task_width = p
         .tasks
         .iter()
         .map(|task| task.title.len())
@@ -154,14 +155,14 @@ pub fn format_tasks(p: &Pomodoro) -> Vec<String> {
     let delimiter = "\n";
     let header = format!(
         "{1:^0$} | {2}{3}",
-        max_width, "Tasks", "Complete?", delimiter
+        task_width, "Tasks", "Complete?", delimiter
     );
 
     let tasks = p
         .tasks
         .iter()
         .map(|task| {
-            let formatted = format_task(task, max_width);
+            let formatted = format_task(task, task_width);
             if let Some(current) = p.current() {
                 //check pointer equality since == not implemented on Tasks
                 if current as *const _ == task as *const _ {
