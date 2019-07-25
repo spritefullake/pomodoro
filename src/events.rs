@@ -1,11 +1,7 @@
 use std::{
     time::{Duration},
     thread::{Thread},
-    sync::mpsc,
 };
-
-pub type Sender = mpsc::SyncSender<Response>;
-pub type Receiver = mpsc::Receiver<Request>;
 /// The events emitted during the lifecyle.
 /// Enums with data contain the remaining duration of the timer
 /// Meant for event lifecycles with a defined Start and End

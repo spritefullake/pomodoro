@@ -1,17 +1,22 @@
 use super::{
     timer::Timer,
-    events::{Request, Response, Sender, Receiver},
+    events::{Request, Response},
 };
 use std::{error::Error, thread, time};
 
+pub type Sender = std::sync::mpsc::Sender<Response>;
+pub type Receiver = std::sync::mpsc::Receiver<Request>;
+
 /// Allows use of an api-controlled event system with message passing
-pub trait Controllable {
+pub trait Controllable 
+    where Self: std::marker::Sized
+{
     /// Activates the event loop for the controlled agent
     fn activate(
         self,
         tx: Sender,
         rx: Receiver,
-    ) -> Result<thread::JoinHandle<()>, Box<dyn Error>>;
+    ) -> Result<thread::JoinHandle<Self>, Box<dyn Error>>;
 
     fn change(&mut self) -> ();
 }
@@ -24,41 +29,42 @@ impl Controllable for Timer {
         mut self,
         tx: Sender,
         rx: Receiver,
-    ) -> Result<thread::JoinHandle<()>, Box<dyn Error>> {
+    ) -> Result<thread::JoinHandle<Self>, Box<dyn Error>> {
         let t = thread::Builder::new()
             .name(self.name.clone())
             .spawn(move || {
                 // think about adding external while to check for an "end" signal
-                'quitCheck: loop {
-                    let start_duration = self.duration;
-                    //block thread; waiting for start signal
-                    wait_for_start(&tx, &rx);
 
-                    while self.duration.as_secs() > 0 {
-                        let received = &rx.try_recv().unwrap_or_else(|_| Request::Continue);
+                //block thread; waiting for start signal
+                wait_for_start(&tx, &rx);
 
-                        match received {
+                loop{
+                    let received = &rx.try_iter().last().unwrap_or(Request::Continue);
+                    
 
-                            Request::Pause => {
-                                let current = thread::current();
-                                tx.send(Response::Pausing(current)).unwrap();
-                                thread::park();
-                            }
+                    match received {
 
-                            Request::Info => tx.send(Response::Ticking(self.duration)).unwrap(),
-
-                            Request::End => break 'quitCheck,
-
-                            _ => self.change()
+                        Request::Pause => {
+                            let current = thread::current();
+                            tx.send(Response::Pausing(current)).unwrap();
+                            thread::park();
                         }
+
+                        Request::Info => tx.send(Response::Ticking(self.duration)).unwrap(),
+
+                        Request::End => break,
+
+                        _ => tx.send(Response::Resetting).unwrap()
                     }
 
-                    if let Request::End = &rx.recv().unwrap() {
-                        break 'quitCheck;
+                    if self.duration.as_secs() > 0 {
+                        self.change();
                     }
                 }
+                
                 //Finally indicate the thread has ended
                 tx.send(Response::Ending).unwrap();
+                self
             })?;
 
         Ok(t)

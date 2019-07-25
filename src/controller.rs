@@ -1,22 +1,24 @@
 use std::{
     sync::mpsc,
     error::Error,
+    thread,
 };
 use super::{ 
-    events::{Request, Response, Sender, Receiver},
-    controllable::{Controllable},
+    events::{Request, Response},
+    controllable::{Controllable, Sender, Receiver},
 };
 /// Exposes an api of the events sent and received to the controlled actor. 
 pub struct Controller {
 
     /// Used by the control to message the controlled actor
-    pub control_tx: mpsc::SyncSender<Request>,
+    pub control_tx: mpsc::Sender<Request>,
     /// The mailbox for responses from the controlled actor
     pub control_rx: mpsc::Receiver<Response>,
 
     /// Used by the controlled to message the controller
     // Do I need this? Seems coupled
-    pub controlled_tx: mpsc::SyncSender<Response>,
+    pub controlled_tx: Sender,
+
     
 }
 /* 
@@ -73,18 +75,19 @@ impl Controller {
        /// Generates the Controller for the controlled agent
     pub fn control(agent : impl Controllable) -> Result<Self, Box<dyn Error>> {
         // Rendezvous channels; sends from these block the current thread until received
-        let (control_tx, controlled_rx) = mpsc::sync_channel::<Request>(0);
-        let (controlled_tx, control_rx) = mpsc::sync_channel::<Response>(0);
+        let (control_tx, controlled_rx) = mpsc::channel::<Request>();
+        let (controlled_tx, control_rx) = mpsc::channel::<Response>();
 
         let clone_tx = Sender::clone(&controlled_tx);
 
-        agent.activate(controlled_tx, controlled_rx)?;
+        let handle = agent.activate(controlled_tx, controlled_rx)?;
 
         let controller = Controller {
             control_tx,
             control_rx,
 
             controlled_tx: clone_tx,
+
         };
 
         Ok(controller)
