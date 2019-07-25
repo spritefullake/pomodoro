@@ -11,7 +11,6 @@ pub enum Request {
     Start,
     Continue,
     Info,
-    Waiting,
     Pause,
     Reset(Duration),
     End,
@@ -20,8 +19,10 @@ pub enum Request {
 #[derive(Debug)]
 pub enum Response {
     Starting,
+    Waiting,
     Ticking(Duration),
     Pausing(Thread),
     Resetting,
     Ending,
+    None,
 }

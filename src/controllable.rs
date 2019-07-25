@@ -39,7 +39,10 @@ impl Controllable for Timer {
                 wait_for_start(&tx, &rx);
 
                 loop{
-                    let received = &rx.try_iter().last().unwrap_or(Request::Continue);
+                    //tries to see if a message is in the mailbox,
+                    //otherwise moves on immediately so the timer isn't slowed down
+                    //this is critical since keeping the time is important here
+                    let received = rx.try_recv().unwrap_or(Request::Continue);
                     
 
                     match received {
@@ -54,7 +57,7 @@ impl Controllable for Timer {
 
                         Request::End => break,
 
-                        _ => tx.send(Response::Resetting).unwrap()
+                        _ => (),
                     }
 
                     if self.duration.as_secs() > 0 {
@@ -82,6 +85,9 @@ fn wait_for_start(tx: &Sender, rx: &Receiver) {
         if let Request::Start = received {
             tx.send(Response::Starting).unwrap();
             break;
+        }
+        else {
+            tx.send(Response::Waiting).unwrap();
         }
     }
 }

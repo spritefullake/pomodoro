@@ -45,6 +45,7 @@ impl Controller {
     fn send(&self, req: Request) -> Output{
         self.control_tx.send(req)?;
 
+        //controller waits/blocks on a response from the controlled agent
         let res = self.control_rx.recv()?;
         Ok(res)
     }

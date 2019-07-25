@@ -124,6 +124,8 @@ pub fn command_loop(c: Controller, p: &mut Pomodoro) -> io::Result<()> {
                             duration.as_secs()
                         )?,
 
+                        Response::Resetting => writeln!(handle, "The timer is resetting")?,
+
                         _ => writeln!(handle, "No tick currently!")?,
                     },
                     _ => writeln!(handle, "No tick!")?,
