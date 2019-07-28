@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use super::task::Task;
 
+
 /// Keeps track of the tasks to go through and the current position of the pomodoro.
 pub struct Pomodoro {
     pub tasks: VecDeque<Task>,

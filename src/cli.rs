@@ -54,7 +54,7 @@ pub fn run(args: env::Args) -> () {
         .for_each(drop);
 
     let tmr = Timer::new(duration, String::from("timer"));
-    let cont: Controller = Controller::control(tmr).unwrap();
+    let cont: Controller = Controller::new(tmr).unwrap();
 
     command_loop(cont, &mut pomo);
 }

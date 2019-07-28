@@ -24,4 +24,12 @@ impl Timer {
         self.duration -= time::Duration::new(amount, 0);
         self
     }
+
+    pub fn reset(&mut self){
+        
+    }
+
+    pub fn set(&mut self, duration: time::Duration){
+        self.duration = duration;
+    }
 }

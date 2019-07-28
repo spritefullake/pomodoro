@@ -2,6 +2,7 @@ use std::{
     sync::mpsc,
     error::Error,
     thread,
+    time::Duration,
 };
 use super::{ 
     events::{Request, Response},
@@ -63,6 +64,9 @@ impl Controller {
     pub fn pause(&self) -> Output {
         self.send(Request::Pause)
     }
+    pub fn reset(&self, t: Duration) -> Output{
+        self.send(Request::Reset(t))
+    }
 
     // Actually controlling the controlled actor
     // Should I add an unpause response from the controlled ?
@@ -74,7 +78,7 @@ impl Controller {
     }
 
        /// Generates the Controller for the controlled agent
-    pub fn control(agent : impl Controllable) -> Result<Self, Box<dyn Error>> {
+    pub fn new(agent : impl Controllable) -> Result<Self, Box<dyn Error>> {
         // Rendezvous channels; sends from these block the current thread until received
         let (control_tx, controlled_rx) = mpsc::channel::<Request>();
         let (controlled_tx, control_rx) = mpsc::channel::<Response>();
@@ -92,6 +96,10 @@ impl Controller {
         };
 
         Ok(controller)
+    }
+    
+    pub fn control(agent : impl Controllable) -> Result<Self, Box<dyn Error>> {
+        Self::new(agent)
     }
     
 

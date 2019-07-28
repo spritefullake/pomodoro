@@ -1,3 +1,5 @@
+
+
 #[macro_export]
 macro_rules! map_commands {
     ($( $command:ident = $type:ty ; $value:ident),+) => {
@@ -14,3 +16,4 @@ macro_rules! map_commands {
     }
     };
 }
+

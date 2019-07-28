@@ -38,6 +38,7 @@ impl Controllable for Timer {
                 //block thread; waiting for start signal
                 wait_for_start(&tx, &rx);
 
+
                 loop{
                     //tries to see if a message is in the mailbox,
                     //otherwise moves on immediately so the timer isn't slowed down
@@ -55,6 +56,11 @@ impl Controllable for Timer {
 
                         Request::Info => tx.send(Response::Ticking(self.duration)).unwrap(),
 
+                        Request::Reset(duration) => {
+                            tx.send(Response::Resetting).unwrap();
+                            self.set(duration);
+                        }
+
                         Request::End => break,
 
                         _ => (),
@@ -62,6 +68,9 @@ impl Controllable for Timer {
 
                     if self.duration.as_secs() > 0 {
                         self.change();
+                    }
+                    else {
+                        tx.send(Response::Ending).unwrap();
                     }
                 }
                 

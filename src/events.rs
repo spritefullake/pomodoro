@@ -12,6 +12,7 @@ pub enum Request {
     Continue,
     Info,
     Pause,
+    Restart,
     Reset(Duration),
     End,
 }
@@ -23,6 +24,7 @@ pub enum Response {
     Ticking(Duration),
     Pausing(Thread),
     Resetting,
+    Restarting,
     Ending,
     None,
 }
