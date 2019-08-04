@@ -12,7 +12,7 @@ mod timer;
 mod task;
 mod events;
 mod input;
-
+mod state_machine;
 use controllable::{Controllable};
 
 mod lib;
@@ -23,7 +23,7 @@ mod lib;
 fn main() {
     //The main way to receive updates from pomodoros is through channels
 
-    cli::run(std::env::args());
+    //cli::run(std::env::args());
     
 
 }

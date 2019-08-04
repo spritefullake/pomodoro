@@ -5,7 +5,6 @@ use super::{
     task::Task,
     timer::Timer,
     events::{Request, Response},
-    input,
 };
 use std::{
     collections::VecDeque,
@@ -15,8 +14,6 @@ use std::{
     io::{self, ErrorKind, Write},
     process,
     time::{self, Duration},
-    thread,
-    sync::{Arc, Mutex},
 };
 //use super::tasks;
 
@@ -39,26 +36,35 @@ pub fn run(args: env::Args) -> () {
     // handle opening error and create an empty, appendable file for that
     let contents = fs::read_to_string(filename).unwrap();
 
-    let pomo = Arc::new(Mutex::from(read_in_tasks(contents)));
-    let mut pomo2 = pomo.clone();
+    let make_task = |line| Task::new(String::from(line));
+
+    let mut pomo = Pomodoro {
+        tasks: VecDeque::new(),
+    };
+
+    contents
+        .lines()
+        .map(|line| {
+            // Tasks will be kept on a queue and popped when completed
+            let task = make_task(line);
+
+            println!("Adding {}", &task);
+            pomo.tasks.push_back(task);
+        })
+        .for_each(drop);
 
     let tmr = Timer::new(duration, String::from("timer"));
     let cont: Controller = Controller::new(tmr).unwrap();
 
-    
-    thread::spawn(move || input::begin(duration,&mut pomo.clone())).join().unwrap();
-    command_loop(cont, &mut pomo2);
-    
+    command_loop(cont, &mut pomo);
 }
 
-pub fn command_loop(c: Controller, p: &mut Arc<Mutex<Pomodoro>>) -> io::Result<()> {
+pub fn command_loop(c: Controller, p: &mut Pomodoro) -> io::Result<()> {
     let mut command = String::new();
     let prompt = ">>>>  ";
     //pair with writeln! to avoid unnecessary flushing from println!
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-
-    let mut p = p.lock().unwrap();
 
     loop {
         //pair print!s with stdout().flush() to ensure the prompt shows before reading in the buffer
@@ -106,7 +112,7 @@ pub fn command_loop(c: Controller, p: &mut Arc<Mutex<Pomodoro>>) -> io::Result<(
                 None => writeln!(handle, "No more tasks to pop!")?,
             },
             "tasks" => {
-                format_tasks(&p).iter().for_each(|line| println!("{}", line));
+                format_tasks(p).iter().for_each(|line| println!("{}", line));
             }
             "timer" => {
                 let result = c.info();
@@ -129,26 +135,6 @@ pub fn command_loop(c: Controller, p: &mut Arc<Mutex<Pomodoro>>) -> io::Result<(
         }
         command.clear();
     }
-}
-
-pub fn read_in_tasks(contents: String) -> Pomodoro {
-    let make_task = |line| Task::new(String::from(line));
-
-    let mut p = Pomodoro {
-        tasks: VecDeque::new(),
-    };
-
-    contents
-        .lines()
-        .map(|line| {
-            // Tasks will be kept on a queue and popped when completed
-            let task = make_task(line);
-
-            println!("Adding {}", &task);
-            p.tasks.push_back(task);
-        })
-        .for_each(drop);
-    p
 }
 
 pub fn format_task(task: &Task, width: usize) -> String {
