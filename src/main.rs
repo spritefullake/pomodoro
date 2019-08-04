@@ -14,7 +14,7 @@ mod events;
 mod input;
 mod state_machine;
 use controllable::{Controllable};
-
+mod trigger;
 mod lib;
 
 /// TODO: Develop an input method for tasks
