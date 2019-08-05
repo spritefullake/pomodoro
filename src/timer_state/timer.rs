@@ -2,18 +2,16 @@ use std::time;
 
 
 /// Manages the timekeeping of a pomodoro.
+#[derive(Debug)]
 pub struct Timer {
     pub duration: time::Duration,
-    // is this field necessary?
-    pub name: String,
 }
 
 /// The only responsibility of the timer should be to keep track of the time
 impl Timer {
-    pub fn new(duration: time::Duration, name: String) -> Self{
+    pub fn new(duration: time::Duration) -> Self{
         Timer {
             duration,
-            name,
         }
     }
 

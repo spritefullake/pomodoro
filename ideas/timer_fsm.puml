@@ -4,13 +4,12 @@ skinparam state{
 }
 hide empty description
 
+[*] --> Idle
 Idle -right-> Running : Start
 Running -left-> Idle : Stop
 Running --> Running : Tick
-
 Idle --> Error : *
 Running --> Error : *
-
 Error --> [*]
 
 @enduml
