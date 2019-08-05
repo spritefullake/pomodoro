@@ -24,7 +24,9 @@ impl TimerState{
             state: State::init(),
         }
     }
-    pub fn get_state(&self) -> State
+    pub fn get_state(&self) -> State {
+        self.state
+    }
 }
 
 impl Responsive<Event> for TimerState{
