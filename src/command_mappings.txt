@@ -1,4 +1,0 @@
-start = Starting
-pause = Pausing
-timer = Ticking
-end   = Ending
