@@ -8,13 +8,12 @@ mod cli;
 mod pomodoro;
 mod controller;
 mod controllable;
-mod timer;
+mod timer_state;
 mod task;
 mod events;
 mod input;
-mod state_machine;
 use controllable::{Controllable};
-mod trigger;
+mod fsm;
 mod lib;
 
 /// TODO: Develop an input method for tasks

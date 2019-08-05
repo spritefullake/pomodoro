@@ -1,0 +1,34 @@
+//The guaranteed api for state machine events and states
+
+/* Every event for a state machine can trigger an action implemented
+through the Trigger trait*/
+
+///Executes an event that modifies some data
+pub trait Trigger{
+    //an associated type lets the implmenter choose the type rather than seprately implement for each type
+    type Data;
+    ///Consumes the data and returns an updated version
+    /// 
+    /// There is no purpose in keeping old data once the event triggers
+    fn trigger(&self, d: Self::Data) -> Self::Data;
+}
+
+/* the state machine only transitions to the next state;
+whatever action is intended by the event is not
+the responsibility of the state machine 
+
+A concrete <T: Trigger> is needed rather than using impl Trigger
+since <T: Trigger> represents a concrete type*/
+pub trait Stateful<T: Trigger>{
+    
+    ///Outputs the initial state
+    fn init() -> Self;
+    ///Input an event into the finite state machine.
+    /// 
+    /// Consumes the event by default.
+    fn next(self, event: T) -> Self;
+}
+
+pub trait Responsive<T: Trigger>{
+    fn respond(&mut self, event: T);
+}
