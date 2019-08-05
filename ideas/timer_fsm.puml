@@ -1,0 +1,16 @@
+@startuml
+skinparam state{
+    FontName Georgia
+}
+hide empty description
+
+Idle -right-> Running : Start
+Running -left-> Idle : Stop
+Running --> Running : Tick
+
+Idle --> Error : *
+Running --> Error : *
+
+Error --> [*]
+
+@enduml
