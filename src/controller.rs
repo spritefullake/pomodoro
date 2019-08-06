@@ -1,106 +1,50 @@
 use std::{
     sync::mpsc,
     error::Error,
-    thread,
-    time::Duration,
 };
-use super::{ 
-    events::{Request, Response},
-    controllable::{Controllable, Sender, Receiver},
-};
-/// Exposes an api of the events sent and received to the controlled actor. 
-pub struct Controller {
-
-    /// Used by the control to message the controlled actor
-    pub control_tx: mpsc::Sender<Request>,
-    /// The mailbox for responses from the controlled actor
-    pub control_rx: mpsc::Receiver<Response>,
-
-    /// Used by the controlled to message the controller
-    // Do I need this? Seems coupled
-    pub controlled_tx: Sender,
-
-    
+///Sets up a mailbox for sending messages **to** some place 
+/// and receiving the messages **from** *some other* place.
+pub struct Controller<S: Send, R: Send> {
+    pub tx: mpsc::Sender<S>,
+    pub rx: mpsc::Receiver<R>,
 }
-/* 
-    If user clicks start button
-    timer gets messaged to start
-    timer returns back that it is starting
-    MESSAGE PASSING (alternative is called shared memory)
-    Timer will be running in a different thread
-    We are running timer in a different thread because we do not want timer
-    to interfere with the main thread (so the main thread does not get stopped/blocked since
-    we would be waiting for timer) 
- */
 
-/// The output from any controller request is the response from the controlled agent
-type Output =  Result< Response, Box<dyn Error> >;
 /// TODO: implement error handling/propagation and improve the return type
-impl Controller {
+impl<'a, S, R> Controller<S,R> 
+where S: Send + 'a, R: Send
+{
     // Sending messages to the controlled actor
     // Each sending action should return the controlled agent's response
 
     // TODO: Handle errors in here instead of the CLI
 
-    /// Sends a request to the controlled agent and returns the response
-    fn send(&self, req: Request) -> Output{
-        self.control_tx.send(req)?;
+    pub fn send(&self, request: S) -> Result<R, Box<dyn Error + 'a>>
+    {
+        self.tx.send(request)?;
 
         //controller waits/blocks on a response from the controlled agent
-        let res = self.control_rx.recv()?;
-        Ok(res)
+        let response = self.rx.recv()?;
+        Ok(response)
     }
     
-    /// Begin the associated controlled agent event loop
-    pub fn start(&self) -> Output{
-        self.send(Request::Start)
-    }
-    pub fn end(&self) -> Output{
-        self.send(Request::End)
-    }
-    pub fn info(&self) -> Output {
-        self.send(Request::Info)
-    }
-    pub fn pause(&self) -> Output {
-        self.send(Request::Pause)
-    }
-    pub fn reset(&self, t: Duration) -> Output{
-        self.send(Request::Reset(t))
-    }
-
-    // Actually controlling the controlled actor
-    // Should I add an unpause response from the controlled ?
-    pub fn unpause(&self){
-        let received = self.control_rx.recv().unwrap();
-        if let Response::Pausing(thread) = received {
-            thread.unpark();
+    pub fn from(tx: mpsc::Sender<S>, rx: mpsc::Receiver<R>) -> Self
+    {
+        Self {
+            tx,
+            rx,
         }
     }
+}
 
-       /// Generates the Controller for the controlled agent
-    pub fn new(agent : impl Controllable) -> Result<Self, Box<dyn Error>> {
-        // Rendezvous channels; sends from these block the current thread until received
-        let (control_tx, controlled_rx) = mpsc::channel::<Request>();
-        let (controlled_tx, control_rx) = mpsc::channel::<Response>();
+///Returns a pair of Controllers that have their mailboxes linked
+pub fn new_pair<S: Send, R: Send>() -> (Controller<S,R>,Controller<R,S>){
+    //tx sends items received by rx_other
+    //tx_other sends items received by rx
+    let (tx, rx_other) = mpsc::channel::<S>();
+    let (tx_other, rx) = mpsc::channel::<R>();
 
-        let clone_tx = Sender::clone(&controlled_tx);
-
-        let handle = agent.activate(controlled_tx, controlled_rx)?;
-
-        let controller = Controller {
-            control_tx,
-            control_rx,
-
-            controlled_tx: clone_tx,
-
-        };
-
-        Ok(controller)
-    }
-    
-    pub fn control(agent : impl Controllable) -> Result<Self, Box<dyn Error>> {
-        Self::new(agent)
-    }
-    
-
+    (
+        Controller::from(tx,rx),
+        Controller::from(tx_other, rx_other)
+    )
 }

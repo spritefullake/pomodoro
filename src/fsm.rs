@@ -1,11 +1,13 @@
 //The guaranteed api for state machine events and states
 
 /* Every event for a state machine can trigger an action implemented
-through the Trigger trait*/
+through the Trigger trait
+
+is the naming confusing? potentially*/
 
 ///Executes an event that modifies some data
 pub trait Trigger{
-    //an associated type lets the implmenter choose the type rather than seprately implement for each type
+    //an associated type lets the implementer choose the type rather than seprately implement for each type
     type Data;
     ///Consumes the data and returns an updated version
     /// 
@@ -20,9 +22,6 @@ the responsibility of the state machine
 A concrete <T: Trigger> is needed rather than using impl Trigger
 since <T: Trigger> represents a concrete type*/
 pub trait Stateful<T: Trigger>{
-    
-    ///Outputs the initial state
-    fn init() -> Self;
     ///Input an event into the finite state machine.
     /// 
     /// Consumes the event by default.

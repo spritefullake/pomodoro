@@ -1,102 +1,18 @@
 use super::{
-    timer::Timer,
-    events::{Request, Response},
+    timer_state::{Event, State, Timer},
+    fsm::Stateful,
 };
 use std::{error::Error, thread, time};
 
-pub type Sender = std::sync::mpsc::Sender<Response>;
-pub type Receiver = std::sync::mpsc::Receiver<Request>;
+
 
 /// Allows use of an api-controlled event system with message passing
+/// 
+/// TODO: rename and recomment
 pub trait Controllable 
-    where Self: std::marker::Sized
-{
+{   
+    type Data;
     /// Activates the event loop for the controlled agent
-    fn activate(
-        self,
-        tx: Sender,
-        rx: Receiver,
-    ) -> Result<thread::JoinHandle<Self>, Box<dyn Error>>;
-
-    fn change(&mut self) -> ();
+    fn activate(self, d: Self::Data) -> Result<thread::JoinHandle<Self>, Box<dyn Error>>;
 }
 
-
-impl Controllable for Timer {
-    /// Begins the other thread, from which the controlled agent can receive requests
-    //  why am I returning a JoinHandle if I don't use it?
-    fn activate(
-        mut self,
-        tx: Sender,
-        rx: Receiver,
-    ) -> Result<thread::JoinHandle<Self>, Box<dyn Error>> {
-        let t = thread::Builder::new()
-            .name(self.name.clone())
-            .spawn(move || {
-                // think about adding external while to check for an "end" signal
-
-                //block thread; waiting for start signal
-                wait_for_start(&tx, &rx);
-
-
-                loop{
-                    //tries to see if a message is in the mailbox,
-                    //otherwise moves on immediately so the timer isn't slowed down
-                    //this is critical since keeping the time is important here
-                    let received = rx.try_recv().unwrap_or(Request::Continue);
-                    
-
-                    match received {
-
-                        Request::Pause => {
-                            let current = thread::current();
-                            tx.send(Response::Pausing(current)).unwrap();
-                            thread::park();
-                        }
-
-                        Request::Info => tx.send(Response::Ticking(self.duration)).unwrap(),
-
-                        Request::Reset(duration) => {
-                            tx.send(Response::Resetting).unwrap();
-                            self.set(duration);
-                        }
-
-                        Request::End => break,
-
-                        _ => (),
-                    }
-
-                    if self.duration.as_secs() > 0 {
-                        self.change();
-                    }
-                    else {
-                        tx.send(Response::Ending).unwrap();
-                    }
-                }
-                
-                //Finally indicate the thread has ended
-                tx.send(Response::Ending).unwrap();
-                self
-            })?;
-
-        Ok(t)
-    }
-    fn change(&mut self){
-        // Main change applied to the data here
-        // consider modularizing?
-        self.decrement_seconds(1);
-        thread::sleep(time::Duration::new(1, 0));
-    }
-}
-
-fn wait_for_start(tx: &Sender, rx: &Receiver) {
-    for received in rx {
-        if let Request::Start = received {
-            tx.send(Response::Starting).unwrap();
-            break;
-        }
-        else {
-            tx.send(Response::Waiting).unwrap();
-        }
-    }
-}

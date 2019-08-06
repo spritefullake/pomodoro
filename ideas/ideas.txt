@@ -1,0 +1,18 @@
+controller.start()
+
+FOR THE MAIN THREAD:
+send_events
+recv_state
+
+FOR THE TIMER:
+send_state
+recv_events
+
+ui.start()
+ui.recv()
+
+ui.stop()
+ui.recv()
+
+ui.reset()
+ui.recv()

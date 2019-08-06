@@ -1,8 +1,7 @@
-
 use crate::fsm::Trigger;
 use super::timer::Timer;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Event{
     Start,
     Stop,
