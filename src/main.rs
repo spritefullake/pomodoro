@@ -13,6 +13,7 @@ mod timer;
 mod task;
 mod input;
 mod fsm;
+mod format;
 
 /// TODO: Develop an input method for tasks
 /// and a display method for pomodoros

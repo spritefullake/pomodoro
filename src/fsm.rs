@@ -27,7 +27,3 @@ where Self : Sized
     ///Input an event into the finite state machine.
     fn next(self, event: &T) -> Option<Self>;
 }
-
-pub trait Responsive<T: Trigger>{
-    fn respond(&mut self, event: T);
-}

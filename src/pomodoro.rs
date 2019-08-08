@@ -31,6 +31,10 @@ impl Pomodoro{
             _    => false,
         }
     }
+    // Indicates if the pomodoro is paused because of a break.
+    pub fn is_on_break(&self) -> bool {
+        self.on_break
+    }
     /// Completes the next completable task on the queue.
     /// During breaks tasks cannot be completed. 
     pub fn complete_next(&mut self) -> Option<&Task>{
