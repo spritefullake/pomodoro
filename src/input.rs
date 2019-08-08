@@ -33,6 +33,15 @@ pub fn begin(t: Timer, p: &mut Pomodoro) -> Result<mailbox::Mailbox<Event, State
     Ok(controller_mail)
 }
 
+pub fn sync_pomodoro_with_state(s: &State, p: &mut Pomodoro)
+{
+    //Complete a task everytime the timer for tasks ends. Start the break timer when the pomodoro is on break.
+    if let State::Idle(_) = s{
+        p.complete_next();
+    }
+
+} 
+
 type TimerState = Result<State, Box<dyn Error>>;
 type TimerEvent = Result<Event, Box<dyn Error>>;
 
@@ -48,6 +57,15 @@ impl mailbox::Mailbox<Event, State> {
     pub fn tick(&self) -> TimerState {
         self.send(Event::Tick)
     }
+    pub fn react<'a>(&self, t: &thread::Thread, s: &'a State) -> Result<&'a Timer, TimerState>{
+        match s {
+            State::Idle(timer) => {
+                self.start(t).unwrap();
+                Ok(timer)
+            },
+            State::Running(timer) => Ok(timer),
+        }
+    }
 }
 impl Controllable for mailbox::Mailbox<State, Event> {
     type Data = Timer;
@@ -58,33 +76,21 @@ impl Controllable for mailbox::Mailbox<State, Event> {
         let mut state = State::init(d);
         let t = thread::spawn(move ||{
             thread::park();
-            for received in &self.rx{
-                if let Event::Start = received {
-                    state = state.next(received);
-                    break;
-                }
-            }
-            self.tx.send(state.clone()).unwrap();
-
-            loop{
+            'event_response: loop{
                 let event = &self.rx.try_recv().unwrap_or(Event::Tick);
-                state = state.next(*event);
-
+                state = state.next(event).unwrap();
                 self.tx.send(state.clone()).unwrap();
 
                 //special actions not applied to the state or data that are important for behavior:
                 //For example, pausing the thread on a stop event
-                match state {
-
-                    State::Idle(_) => thread::park(),
-
-                    State::Error => break,
-
+                //push errors into typesystem with result and only match to events!
+                match event {
+                    Event::Stop => thread::park(),
                     _ => (),
                 }
             }
 
-            self
+            
         });
 
         Ok(t)

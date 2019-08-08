@@ -7,7 +7,7 @@ is the naming confusing? potentially*/
 
 ///Executes an event that modifies some data
 pub trait Trigger{
-    //an associated type lets the implementer choose the type rather than seprately implement for each type
+    //an associated type lets the implementer choose the type rather than separately implement for each type
     type Data;
     ///Consumes the data and returns an updated version
     /// 
@@ -21,11 +21,11 @@ the responsibility of the state machine
 
 A concrete <T: Trigger> is needed rather than using impl Trigger
 since <T: Trigger> represents a concrete type*/
-pub trait Stateful<T: Trigger>{
+pub trait Stateful<T: Trigger>
+where Self : Sized
+{
     ///Input an event into the finite state machine.
-    /// 
-    /// Consumes the event by default.
-    fn next(self, event: T) -> Self;
+    fn next(self, event: &T) -> Option<Self>;
 }
 
 pub trait Responsive<T: Trigger>{

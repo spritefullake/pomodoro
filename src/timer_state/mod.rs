@@ -14,7 +14,6 @@ use crate::{
 pub enum State{
     Idle(Timer),
     Running(Timer),
-    Error,
 }
 
 impl State {
@@ -24,18 +23,27 @@ impl State {
 }
 
 impl Stateful<Event> for State {
-    fn next(self, e: Event) -> Self {
+    fn next(self, e: &Event) -> Option<Self> {
         match self{
             State::Idle(t) => match e {
-                Event::Start => State::Running(e.trigger(t)),
-                _ => State::Error,
+                Event::Start => Some(State::Running(e.trigger(t))),
+                _ => None,
             },
             State::Running(t) => match e {
-                Event::Stop => State::Idle(e.trigger(t)),
-                Event::Tick => State::Running(e.trigger(t)),
-                _ => State::Error,
+                Event::Stop => Some(State::Idle(e.trigger(t))),
+                Event::Tick => Some(State::Running(e.trigger(t))),
+                _ => None,
             },
-            _ => self
         }
+    }
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    #[test]
+    fn fsm_none_on_wrong_input(){
+        let s = State::init(Timer::new(std::time::Duration::new(1,0)));//in Idle state
+        assert!(s.next(&Event::Stop).is_none());
     }
 }

@@ -1,10 +1,11 @@
 use super::{
-    mailbox::{Mailbox},
+    mailbox::{self,Mailbox},
     pomodoro::Pomodoro,
     task::Task,
     timer::Timer,
     timer_state::{Event, State},
-    input
+    input,
+    controllable::Controllable,
 };
 use std::{
     collections::VecDeque,
@@ -38,9 +39,22 @@ pub fn run(args: env::Args) -> () {
     let contents = fs::read_to_string(filename).unwrap();
 
     let mut pomo = lines_to_pomodoro(contents);
+    let t = Timer::new(duration);
 
-    let c = input::begin(Timer::new(duration), &mut pomo);
-    command_loop(c.unwrap(), &mut pomo);
+    //Timer loop and main loop mailbox setup
+    let (controller_mail, timer_mail) = mailbox::new_pair::<Event, State>();
+    let handle = timer_mail.activate(t).unwrap();
+    controller_mail.start(handle.thread()).unwrap();
+
+    //Complete a task everytime the timer for tasks ends. Start the break timer when the pomodoro is on break.
+    for state in &controller_mail.rx{
+        input::sync_pomodoro_with_state(&state, &mut pomo);
+        let the_time = controller_mail.react(handle.thread(), &state).unwrap();
+        println!("The time is {}",the_time.duration.as_secs());     
+    }
+
+    
+    //command_loop(c.unwrap(), &mut pomo);
 }
 
 pub fn lines_to_pomodoro(lines: String) -> Pomodoro {
