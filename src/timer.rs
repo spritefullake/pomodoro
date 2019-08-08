@@ -2,7 +2,7 @@ use std::time;
 
 
 /// Manages the timekeeping of a pomodoro.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Timer {
     pub duration: time::Duration,
 }
@@ -18,10 +18,6 @@ impl Timer {
     pub fn decrement_seconds(&mut self, amount: u64) -> &mut Self {
         self.duration -= time::Duration::new(amount, 0);
         self
-    }
-
-    pub fn reset(&mut self){
-        
     }
 
     pub fn set(&mut self, duration: time::Duration){

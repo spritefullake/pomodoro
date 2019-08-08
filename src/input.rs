@@ -1,33 +1,42 @@
 // An abstract, platform-agnostic, pomodoro-input module
 use super::{
-    controller,
-    timer_state::{Timer, Event, State},
+    mailbox,
+    timer::Timer,
+    timer_state::{Event, State},
     pomodoro::Pomodoro,
-    events::{Response},
     controllable::Controllable,
-    fsm::{Stateful}
+    fsm::{Stateful, Trigger},
+    task::Task,
 };
 use std::{
-    time::Duration,
     thread,
-    collections::VecDeque,
     error::Error,
+    time::Duration,
 };
 
-pub fn begin(duration : Duration){
+///Begin should implement the minimum necessary connection between the pomodoros
+/// and the timer.
+pub fn begin(t: Timer, p: &mut Pomodoro) -> Result<mailbox::Mailbox<Event, State>,Box<dyn Error>>{
 
-    let (main_mail, timer_mail) = controller::new_pair::<Event, State>();
+    //Timer and main loop mailbox setup
+    let (controller_mail, timer_mail) = mailbox::new_pair::<Event, State>();
+    let handle = timer_mail.activate(t)?;
+    controller_mail.start(handle.thread())?;
+    //Complete a task everytime the timer for tasks ends. Start the break timer when the pomodoro is on break.
+    for received in &controller_mail.rx{
+        if let State::Idle(_) = received{
+            p.complete_next();
+            controller_mail.start(handle.thread())?;
+        }
+    }
 
-    let mut p = Pomodoro{ tasks: VecDeque::new()};
-
-    let handle = timer_mail.activate(Timer::new(duration)).unwrap();
-    main_mail.start(handle.thread());
+    Ok(controller_mail)
 }
 
 type TimerState = Result<State, Box<dyn Error>>;
 type TimerEvent = Result<Event, Box<dyn Error>>;
 
-impl controller::Controller<Event, State> {
+impl mailbox::Mailbox<Event, State> {
     pub fn start(&self, t: &thread::Thread) -> TimerState{
         //ensure the timer thread is NOT frozen
         t.unpark();
@@ -40,9 +49,7 @@ impl controller::Controller<Event, State> {
         self.send(Event::Tick)
     }
 }
-
-
-impl Controllable for controller::Controller<State, Event> {
+impl Controllable for mailbox::Mailbox<State, Event> {
     type Data = Timer;
     ///Starts the timer thread 
     fn activate(self, d: Self::Data) 
@@ -51,45 +58,66 @@ impl Controllable for controller::Controller<State, Event> {
         let mut state = State::init(d);
         let t = thread::spawn(move ||{
             thread::park();
-            for received in self.rx{
+            for received in &self.rx{
                 if let Event::Start = received {
                     state = state.next(received);
                     break;
                 }
             }
-            self.tx.send(state).unwrap();
+            self.tx.send(state.clone()).unwrap();
 
             loop{
-                //tries to see if a message is in the mailbox,
-                //otherwise moves on immediately so the timer isn't slowed down
-                //this is critical since keeping the time is important here
-                let received = self.rx.try_recv().unwrap_or(Event::Tick);
-                
-                //THOUGHT: query the state to determine what to do to the thread
-                state = state.next(received);
+                let event = &self.rx.try_recv().unwrap_or(Event::Tick);
+                state = state.next(*event);
 
+                self.tx.send(state.clone()).unwrap();
 
+                //special actions not applied to the state or data that are important for behavior:
+                //For example, pausing the thread on a stop event
                 match state {
 
-                    State::Idle(t) => {
-                        let current = thread::current();
-                        self.tx.send(state).unwrap();
-                        thread::park();
-                    }
-
-                    State::Running(t) => self.tx.send(state).unwrap(),
+                    State::Idle(_) => thread::park(),
 
                     State::Error => break,
 
                     _ => (),
                 }
-
-                
             }
 
             self
         });
 
         Ok(t)
+    }
+}
+
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    #[test]
+    #[ignore]
+    fn complete_task_on_timer_end(){
+        let n = 1;
+        let t = Timer::new(Duration::from_secs(n));
+        //Timer and main loop mailbox setup
+        let (controller_mail, timer_mail) = mailbox::new_pair::<Event, State>();
+        let handle = timer_mail.activate(t).unwrap();
+        controller_mail.start(handle.thread()).expect("Starting Error");
+
+        //pomodoro setup
+        let tasks = std::collections::VecDeque::from(vec![
+            Task::new(String::from("task1")),
+            Task::new(String::from("task2"))
+        ]);
+        let p = Pomodoro::new(tasks);
+
+        for received in controller_mail.rx {
+            if let State::Idle(t) = received {
+                if !(t.duration.as_secs() == 0) {
+                    panic!();
+                }
+            }
+        }
     }
 }

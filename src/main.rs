@@ -6,13 +6,12 @@ use std::{
 
 mod cli;
 mod pomodoro;
-mod controller;
+mod mailbox;
 mod controllable;
 mod timer_state;
+mod timer;
 mod task;
-mod events;
 mod input;
-use controllable::{Controllable};
 mod fsm;
 mod lib;
 

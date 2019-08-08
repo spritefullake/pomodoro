@@ -1,15 +1,16 @@
 /* The finite state machine for the timer */
 
 pub mod event;
-pub mod timer;
 
 pub use event::Event;
-pub use timer::Timer;
 
-use crate::fsm::{Stateful, Trigger};
+use crate::{
+    fsm::{Stateful, Trigger},
+    timer::Timer,
+};
 
 ///Carries a label for the current state with the data wrapped inside
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum State{
     Idle(Timer),
     Running(Timer),

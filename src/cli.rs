@@ -1,10 +1,10 @@
 use super::{
-    controllable::{self, Controllable},
-    controller::{Controller},
+    mailbox::{Mailbox},
     pomodoro::Pomodoro,
     task::Task,
     timer::Timer,
-    events::{Request, Response},
+    timer_state::{Event, State},
+    input
 };
 use std::{
     collections::VecDeque,
@@ -14,6 +14,7 @@ use std::{
     io::{self, ErrorKind, Write},
     process,
     time::{self, Duration},
+    thread,
 };
 //use super::tasks;
 
@@ -36,105 +37,31 @@ pub fn run(args: env::Args) -> () {
     // handle opening error and create an empty, appendable file for that
     let contents = fs::read_to_string(filename).unwrap();
 
+    let mut pomo = lines_to_pomodoro(contents);
+
+    let c = input::begin(Timer::new(duration), &mut pomo);
+    command_loop(c.unwrap(), &mut pomo);
+}
+
+pub fn lines_to_pomodoro(lines: String) -> Pomodoro {
     let make_task = |line| Task::new(String::from(line));
 
-    let mut pomo = Pomodoro {
-        tasks: VecDeque::new(),
-    };
+    let mut p = Pomodoro::new(VecDeque::new());
 
-    contents
+    lines
         .lines()
         .map(|line| {
             // Tasks will be kept on a queue and popped when completed
             let task = make_task(line);
-
-            println!("Adding {}", &task);
-            pomo.tasks.push_back(task);
+            p.tasks.push_back(task);
         })
         .for_each(drop);
-
-    let tmr = Timer::new(duration, String::from("timer"));
-    let cont: Controller = Controller::new(tmr).unwrap();
-
-    command_loop(cont, &mut pomo);
+    
+    p
 }
 
-pub fn command_loop(c: Controller, p: &mut Pomodoro) -> io::Result<()> {
-    let mut command = String::new();
-    let prompt = ">>>>  ";
-    //pair with writeln! to avoid unnecessary flushing from println!
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-
-    loop {
-        //pair print!s with stdout().flush() to ensure the prompt shows before reading in the buffer
-        print!("\n{}", &prompt);
-        io::stdout().flush().expect("Failed to flush stdout");
-
-        io::stdin()
-            .read_line(&mut command)
-            .expect("Failed to read line");
-        let trimmed = command.trim();
-
-        let default_width = 8;
-
-        // TODO: create mapping of commands to using the pomodoro / timer / controller api
-        // Implement add, help, commands
-        match trimmed {
-            "start" => {
-                writeln!(handle, "Starting the timer")?;
-                c.start()
-                    .map(|res| writeln!(handle, "The response is {:?}", res))
-                    .expect("Starting Error!")?;
-            }
-            "pause" => {
-                writeln!(handle, "Pausing the thread")?;
-            }
-            "current" => {
-                let current = p.current();
-                match current {
-                    Some(task) => writeln!(handle, "{}", format_task(task, default_width))?,
-                    None => writeln!(handle, "There is no current task!")?,
-                }
-            }
-            "complete" => match p.complete_next() {
-                Some(task) => writeln!(
-                    handle,
-                    "Just completed: {}",
-                    format_task(task, default_width)
-                )?,
-                None => writeln!(handle, "No more tasks to complete!")?,
-            },
-            "pop" => match p.tasks.pop_front() {
-                Some(task) => {
-                    writeln!(handle, "Just popped: {}", format_task(&task, default_width))?
-                }
-                None => writeln!(handle, "No more tasks to pop!")?,
-            },
-            "tasks" => {
-                format_tasks(p).iter().for_each(|line| println!("{}", line));
-            }
-            "timer" => {
-                let result = c.info();
-                match result {
-                    Ok(res) => match res {
-                        Response::Ticking(duration) => writeln!(
-                            handle,
-                            "The timer has {} seconds remaining",
-                            duration.as_secs()
-                        )?,
-
-                        Response::Resetting => writeln!(handle, "The timer is resetting")?,
-
-                        _ => writeln!(handle, "No tick currently!")?,
-                    },
-                    _ => writeln!(handle, "No tick!")?,
-                }
-            }
-            _ => writeln!(handle, "'{}' is not a valid command!", trimmed)?,
-        }
-        command.clear();
-    }
+pub fn command_loop(c: Mailbox<Event, State>, p: &mut Pomodoro) -> io::Result<()> {
+    unimplemented!();      
 }
 
 pub fn format_task(task: &Task, width: usize) -> String {
